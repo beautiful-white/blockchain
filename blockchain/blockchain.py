@@ -1,36 +1,54 @@
 import json
 import random
+import asyncio
 
 from datetime import datetime
 from hashlib import sha256
+
+from blockchain.client import Client
 
 
 class Blockchain(object):
     """
     Blockchain class
     """
+    standart = ""
+    last = dict()
+    client = Client('194.247.187.94', 35565)
 
-    standart = "fefe"
-    index = 0
+    def get_standart_from_server(self):
+        return asyncio.run(self.client.write("std"))
 
-    def __init__(self):
+    def get_last_block_from_server(self):
+        """
+        Get last block of chain
+        """
+        return json.loads(asyncio.run(self.client.write("lst")))
+
+    def update(self):
+        self.last = self.get_last_block_from_server()
+        self.standart = self.get_standart_from_server()
+
+    def send_block_to_server(self, block: dict):
+        return asyncio.run(self.client.write(json.dumps(
+            block, sort_keys=True).encode("utf-8")))
+
+    def __init__(self, value: str = "No Value"):
         """
         Init genesis block
         """
-        self.chain = []
-        self.pending_transactions = []
-
-        print("Creating genesis block")
-        self.chain.append(self.new_block())
+        self.value = value
+        self.standart = self.get_standart_from_server()
+        self.last = self.get_last_block_from_server()
+        print(self.last)
 
     def new_block(self, previous_hash: str = None) -> dict:
         """
         Create a block mazafaka
         """
         block = {
-            'index': len(self.chain),
             'timestamp': datetime.now().isoformat(),
-            'transactions': self.pending_transactions,
+            'value': self.value,
             'previous_hash': previous_hash,
             'nonce': format(random.getrandbits(64), "x"),
         }
@@ -47,27 +65,32 @@ class Blockchain(object):
         block_string = json.dumps(block, sort_keys=True).encode()
         return sha256(block_string).hexdigest()
 
-    def last_block(self):
-        """
-        Get last block of chain
-        """
-        return self.chain[-1] if self.chain else None
-
     def get_standart(self):
-
         return self.standart
 
-    def proof_of_work(self):
+    def last_block(self):
+        return self.last
+
+    def proof_of_work(self, value):
         """
         Mine, mine, mine!!!!
         """
+
+        self.value = value
         while True:
             new_block = self.new_block(self.last_block()["hash"])
             if self.valid_block(new_block, self.get_standart()):
                 break
         self.pending_transactions = []
-        self.chain.append(new_block)
+        self.block = new_block
         print("[!] Found a new block: ", new_block)
+        server_answer = self.send_block_to_server(new_block)
+        print(server_answer)
+        self.last = new_block
+        if server_answer == "INVALID BLOCK":
+            self.update()
+            print("Updating standart and last block, repeating...")
+            self.proof_of_work(value=value)
 
     @staticmethod
     def valid_block(block: dict, standart: str = "fefe"):
@@ -75,12 +98,3 @@ class Blockchain(object):
         Here we validate the block
         """
         return block["hash"].startswith(standart)
-
-    def get_pendings(self):
-        self.pending_transactions = [f"sent you {random.randint(100,5000)} dollars"
-                                     for _ in range(random.randint(1, 10))]
-
-    def lets_mine(self):
-        while True:
-            self.get_pendings()
-            self.proof_of_work()
