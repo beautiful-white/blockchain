@@ -12,11 +12,14 @@ class Blockchain(object):
     """
     Blockchain class
     """
-    standart = ""
-    last = dict()
-    client = Client('194.247.187.94', 35565)
+    standart: str = ""
+    last: dict = dict()
+    client: Client = Client('194.247.187.94', 35565)
 
     def get_standart_from_server(self):
+        """
+        Get new standart from server
+        """
         return asyncio.run(self.client.write("std"))
 
     def get_last_block_from_server(self):
@@ -26,12 +29,30 @@ class Blockchain(object):
         return json.loads(asyncio.run(self.client.write("lst")))
 
     def update(self):
+        """
+        Get new standart and last mined block
+        """
         self.last = self.get_last_block_from_server()
         self.standart = self.get_standart_from_server()
 
     def send_block_to_server(self, block: dict):
+        """
+        Send block to server for varification
+        """
         return asyncio.run(self.client.write(json.dumps(
-            block, sort_keys=True).encode("utf-8")))
+            block, sort_keys=True)))  # there was the encode function
+
+    def get_blockchain_from_server(self):
+        """
+        Get a whole blockchain
+        """
+        chain: list = list()
+        count: int = int(asyncio.run(self.client.write("cnt")))
+        print(count)
+        for i in range(count):
+            block = json.loads(asyncio.run(self.client.write(str(i))))
+            chain.append(block)
+        return chain
 
     def __init__(self, value: str = "No Value"):
         """
@@ -66,9 +87,15 @@ class Blockchain(object):
         return sha256(block_string).hexdigest()
 
     def get_standart(self):
+        """
+        Get standart
+        """
         return self.standart
 
     def last_block(self):
+        """
+        Get last block
+        """
         return self.last
 
     def proof_of_work(self, value):
@@ -91,6 +118,9 @@ class Blockchain(object):
             self.update()
             print("Updating standart and last block, repeating...")
             self.proof_of_work(value=value)
+
+    def mine(self, value: str):
+        self.proof_of_work(value=value)
 
     @staticmethod
     def valid_block(block: dict, standart: str = "fefe"):

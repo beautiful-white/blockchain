@@ -9,7 +9,7 @@ from hashlib import sha256
 logger = structlog.getLogger(__name__)
 
 chain = list()
-count = 0
+count = 1
 block = {
     'timestamp': datetime.now().isoformat(),
     'value': "Momento mori",
@@ -22,23 +22,7 @@ block["hash"] = block_hash
 
 chain.append(block)
 
-standart = "fefe"
-
-# async def handle_echo(reader, writer):
-#     data = await reader.read(100)
-#     message = data.decode("utf-8")
-#     data = (message + "123").encode("utf-8")
-#     addr = writer.get_extra_info('peername')[0]
-
-#     logger.info(f"Received {message!r} from {addr!r}")
-
-#     logger.info(f"Send: {message!r} to {addr!r}")
-#     writer.write(data)
-#     await writer.drain()
-
-#     logger.info(f"Close the connection {addr!r}")
-#     writer.close()
-#     await writer.wait_closed()
+standart = "fe"
 
 
 def hash(block: dict) -> str:
@@ -68,27 +52,35 @@ def valid_block(block: dict, standart: str = "fefe"):
 
 async def check_standart():
     global count, standart
-    count += 1
-    if count % 10 == 0:
-        standart = format(random.getrandbits(4 * (count//10)+3), "x")
+    if count % 100 == 0:
+        standart = format(random.getrandbits(4 * ((count//100)+3)), "x")
         logger.warn(f"Changed standart: {standart}")
 
 
 async def handle_echo(reader, writer):
+    global count
     data = await reader.read(400_000)
-    message = data.decode("utf-8").strip()
-    if len(message) > 3 and message[0] != "{" and message[-1] != "}":
+    ip = writer.get_extra_info('peername')[0]
+    message: str = data.decode("utf-8").strip()
+    if len(message) > 3 and message[0] != "{" and message[-1] != "}" and not message.isdigit():
         writer.write("ERR".encode("utf-8"))
     elif message == "lst":
         writer.write(json.dumps(chain[-1], sort_keys=True).encode("utf-8"))
     elif message == "std":
         writer.write(standart.encode("utf-8"))
+    elif message == "cnt":
+        writer.write(str(count).encode("utf-8"))
+    elif message.isdigit() and int(message) >= 0 and int(message) < count:
+        writer.write(json.dumps(
+            chain[int(message)], sort_keys=True).encode("utf-8"))
+        logger.info(f"SENT {message} block to {ip}")
     else:
         try:
             block = json.loads(message)
             if valid_block(block, standart):
                 writer.write("ACCEPTED".encode("utf-8"))
                 logger.info(f"ACCEPTED NEW BLOCK: {message}")
+                count += 1
                 await check_standart()
                 chain.append(block)
             else:

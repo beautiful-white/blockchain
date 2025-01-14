@@ -15,7 +15,8 @@ def main():
               ]
     blockchain = Blockchain()
     for text in poetry:
-        blockchain.proof_of_work(text)
+        blockchain.mine(text)
+    print(*blockchain.get_blockchain_from_server(), sep="\n")
 
 
 if __name__ == "__main__":
