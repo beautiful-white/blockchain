@@ -78,11 +78,11 @@ async def handle_echo(reader, writer):
         try:
             block = json.loads(message)
             if valid_block(block, standart):
+                await check_standart()
+                count += 1
+                chain.append(block)
                 writer.write("ACCEPTED".encode("utf-8"))
                 logger.info(f"ACCEPTED NEW BLOCK: {message}")
-                count += 1
-                await check_standart()
-                chain.append(block)
             else:
                 writer.write("INVALID BLOCK".encode("utf-8"))
         except:

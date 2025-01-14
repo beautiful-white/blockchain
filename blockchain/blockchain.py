@@ -48,10 +48,10 @@ class Blockchain(object):
         """
         chain: list = list()
         count: int = int(asyncio.run(self.client.write("cnt")))
-        print(count)
         for i in range(count):
             block = json.loads(asyncio.run(self.client.write(str(i))))
             chain.append(block)
+            print(f"GOT {i} of {count}", end='\r')
         return chain
 
     def __init__(self, value: str = "No Value"):
@@ -61,7 +61,6 @@ class Blockchain(object):
         self.value = value
         self.standart = self.get_standart_from_server()
         self.last = self.get_last_block_from_server()
-        print(self.last)
 
     def new_block(self, previous_hash: str = None) -> dict:
         """
