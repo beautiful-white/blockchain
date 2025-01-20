@@ -54,17 +54,15 @@ class Blockchain(object):
             print(f"GOT {i} of {count}", end='\r')
         return chain
 
-    def __init__(self, value: str = "No Value"):
+    def __init__(self):
         """
         Init genesis block
         """
-        self.value = value
-        self.standart = self.get_standart_from_server()
-        self.last = self.get_last_block_from_server()
+        self.update()
 
     def new_block(self, previous_hash: str = None) -> dict:
         """
-        Create a block mazafaka
+        Create a block 
         """
         block = {
             'timestamp': datetime.now().isoformat(),
